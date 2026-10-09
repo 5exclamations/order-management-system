@@ -1,10 +1,40 @@
 # Order Management System
 
+[![CI](https://github.com/5exclamations/order-management-system/actions/workflows/ci.yml/badge.svg)](https://github.com/5exclamations/order-management-system/actions/workflows/ci.yml)
+
 Spring Boot 3.5 / Java 21 order management backend: customers, catalog, inventory with stock reservation, an order
 state machine, simulated payments, cancellation and an event-driven refund workflow, with audit logging.
 
 Stack: Spring Security (JWT + RBAC), Spring Data JPA, PostgreSQL, Flyway, Kafka, springdoc OpenAPI,
 JUnit 5, Testcontainers, Docker, GitHub Actions.
+
+## Architecture
+
+A single Spring Boot service (modular monolith, package-by-feature). The consistency rules need one database
+transaction per use case, so there are no microservices; Kafka carries side effects that may happen later.
+
+```mermaid
+flowchart LR
+  client([Client]) -->|JWT| api[REST controllers<br/>RBAC + ownership checks]
+  api --> svc[Use-case services<br/>one transaction each]
+  svc -->|"order + reservations + audit + outbox"| pg[(PostgreSQL<br/>Flyway migrations)]
+  relay[Outbox relay<br/>SKIP LOCKED] -->|poll| pg
+  relay -->|REFUND_REQUESTED| kafka[(Kafka)]
+  kafka --> consumer[Refund consumer<br/>idempotent, retry then DLT]
+  consumer --> gw[Simulated payment gateway]
+  consumer --> pg
+```
+
+| Concern | Decision |
+|---|---|
+| Overselling | `@Version` on inventory; the whole use case is retried on conflict, outside the transaction |
+| Double charging | `SELECT ... FOR UPDATE` on the order before the irreversible payment call |
+| Duplicate requests | `Idempotency-Key` row inserted in the same transaction as the work, unique per scope, request hash checked |
+| Lost events | Transactional outbox instead of dual writes; consumers tolerate at-least-once delivery |
+| Refund over-run | Committed refund total on a versioned payment row plus a database check constraint |
+
+Full rationale and known limitations: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). State machine and refund sequence:
+[docs/ORDER_LIFECYCLE.md](docs/ORDER_LIFECYCLE.md).
 
 ## Quick start
 
