@@ -17,4 +17,7 @@ Requirements: JDK 21, Maven 3.9+, Docker.
 Logs are structured JSON (logstash format) with `requestId` from the `X-Request-Id` header.
 Kafka topic `oms.events` (3 partitions, key = order id); failed messages go to `oms.events.DLT`.
 
+Windows: Docker Desktop needs the WSL2 backend (`wsl --install --no-distribution` in an admin shell, then reboot). With roughly
+8 GB of RAM, stop other containers before `mvn verify`; `ConcurrencyIT` takes about two minutes on a 4-thread machine.
+
 Troubleshooting: `exec format error` from a Kafka container means a broken image build for your CPU - use `apache/kafka:3.9.1`.

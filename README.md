@@ -40,6 +40,8 @@ mvn verify    # + integration tests: real PostgreSQL and Kafka via Testcontainer
 ```
 
 On macOS with Colima: `export DOCKER_HOST=unix://$HOME/.colima/default/docker.sock TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock`.
+On Windows: install Docker Desktop with the WSL2 backend (`wsl --install --no-distribution` from an admin shell, then reboot); no extra
+Testcontainers configuration was needed.
 Docker Engine 29 needs Testcontainers 1.21.4+ (set in `pom.xml`).
 
 | Suite | What it proves |
@@ -48,6 +50,22 @@ Docker Engine 29 needs Testcontainers 1.21.4+ (set in `pom.xml`).
 | `OrderWorkflowIT` | full lifecycle incl. async Kafka refund, declines, cancel, expiry, RBAC/ownership, idempotency, validation |
 | `ConcurrencyIT` | 20 buyers / 5 units never oversell; same key x10 = 1 order; concurrent pay charges once; refunds can't exceed payment |
 | `TransactionIT` | failed multi-line order rolls back order, reservation, audit, outbox; optimistic-lock lost update; DB constraints |
+
+## Verification
+
+Last verified on Windows 10, JDK 21.0.12, Maven 3.9.11, Docker Desktop (Engine 29.7.2, WSL2) on 2026-10-09:
+
+| Check | Result |
+|---|---|
+| `mvn verify` | 12 unit + 20 integration tests passed (real PostgreSQL and Kafka via Testcontainers) |
+| `docker compose --profile app up --build` | image built; app, Postgres and Kafka started and healthy |
+| `mvn spring-boot:run` with the `dev` profile | started in ~29 s, seed users and products created |
+| `scripts/live-api-check.ps1` (live REST workflow) | 39/39 checks passed against both the container and the local run |
+
+The live script covers seeded logins, RBAC (401/403), order creation with `Idempotency-Key` replay, stock reservation, payment,
+ship, deliver, cancellation of PENDING and PAID orders, async Kafka refunds (manual partial and automatic on cancel), insufficient
+stock (409), declined payments, validation errors and actuator exposure. Run it with the app on `localhost:8080`:
+`powershell -File scripts/live-api-check.ps1`.
 
 ## Docs
 
