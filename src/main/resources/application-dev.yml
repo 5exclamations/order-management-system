@@ -1,0 +1,11 @@
+# Local development defaults (docker compose: Postgres on 5433, Kafka on 29092). Never use in production.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/oms}
+    username: ${DB_USER:oms}
+    password: ${DB_PASSWORD:oms}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}

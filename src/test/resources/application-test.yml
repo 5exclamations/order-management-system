@@ -1,0 +1,11 @@
+app:
+  security:
+    jwt-secret: test-only-secret-0123456789-abcdefghij
+  orders:
+    expiry-scan-interval: 1h
+  outbox:
+    poll-interval: 200ms
+logging:
+  level:
+    root: WARN
+    com.acme.oms: INFO
